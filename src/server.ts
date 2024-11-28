@@ -18,11 +18,18 @@ app.listen(PORT, () => {
 
 
 import { fetchMovies } from '../utils/fetchMovies';
+import logger from '../utils/logger';
+
+app.use((req, res, next) => {
+    logger.info(`Incoming request: ${req.method} ${req.url}`);
+    next();
+});
 
 app.get('/search', async (req: Request, res: Response) => {
     const query = req.query.q as string;
 
     if(!query){
+        logger.warn('Missing query paramenter "q"');
         return res.status(400).json({ error: 'Query paramenter "q" is required.'});
     }
 
@@ -30,6 +37,7 @@ app.get('/search', async (req: Request, res: Response) => {
         const response= await fetchMovies(query);
 
         if (response.Response === 'False') {
+            logger.info(`No movies found for query: "${query}"`);
             return res.status(404).json({error: response.Error || 'No movies found.'});
 
         }
@@ -42,9 +50,10 @@ app.get('/search', async (req: Request, res: Response) => {
             poster: movie.Poster,
         }));
 
+        logger.info(`Successfully fetched ${movies.length} movies for query: "${query}"`);
         res.status(200).json({movies, totalResutls: response.totalResutls});
     } catch (error) {
-        console.error('Error fetching movies:', error);
+        logger.error(`Error fetching movies: ${error}`);
         res.status(500).json({ error: 'Failed to fetch movies. Please try again later.'});
     }
 });
